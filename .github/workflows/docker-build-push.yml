@@ -18,6 +18,13 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Set up JDK 17 (for local Maven builds)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
       - name: Download built JAR artifact (when triggered by jar workflow)
         if: ${{ github.event_name == 'workflow_run' }}
         uses: actions/download-artifact@v4
@@ -27,31 +34,22 @@ jobs:
           path: target
           run-id: ${{ github.event.workflow_run.id }}
 
-      - name: Build JAR locally (fallback for manual dispatch)
-        if: ${{ github.event_name != 'workflow_run' }}
-        run: mvn -B -DskipTests package
-
-      - name: Verify JAR exists (fallback to local build if missing)
+      - name: Ensure JAR exists (build locally if needed)
         run: |
           set -e
           if compgen -G "target/*.jar" > /dev/null; then
-            echo "Found JAR:"; ls -la target/*.jar
-            exit 0
-          fi
-
-          echo "JAR not found in target/. Attempting local Maven build as fallback..."
-          if command -v mvn >/dev/null 2>&1; then
+            echo "JAR found in target/:"
+            ls -la target/*.jar
+          else
+            echo "JAR not found in target/. Building locally with Maven..."
             mvn -B -DskipTests package
-          else
-            echo "Maven not installed on runner. Cannot build JAR locally." >&2
-            exit 1
-          fi
-
-          if compgen -G "target/*.jar" > /dev/null; then
-            echo "Built JAR:"; ls -la target/*.jar
-          else
-            echo "Failed to produce JAR after local build." >&2
-            exit 1
+            if compgen -G "target/*.jar" > /dev/null; then
+              echo "JAR built successfully:"
+              ls -la target/*.jar
+            else
+              echo "ERROR: Failed to build JAR with Maven"
+              exit 1
+            fi
           fi
 
       - name: Set up Google Cloud authentication
