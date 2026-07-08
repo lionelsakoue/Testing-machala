@@ -21,6 +21,7 @@ jobs:
       - name: Download built JAR artifact (when triggered by jar workflow)
         if: ${{ github.event_name == 'workflow_run' }}
         uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
           name: auth-demo-jar
           path: target
@@ -30,13 +31,26 @@ jobs:
         if: ${{ github.event_name != 'workflow_run' }}
         run: mvn -B -DskipTests package
 
-      - name: Verify JAR exists
+      - name: Verify JAR exists (fallback to local build if missing)
         run: |
           set -e
           if compgen -G "target/*.jar" > /dev/null; then
             echo "Found JAR:"; ls -la target/*.jar
+            exit 0
+          fi
+
+          echo "JAR not found in target/. Attempting local Maven build as fallback..."
+          if command -v mvn >/dev/null 2>&1; then
+            mvn -B -DskipTests package
           else
-            echo "No built JAR was found in target/. If this run was started manually, the workflow tried to build the JAR locally; otherwise re-run the 'Build Java artifact' workflow and trigger this workflow via that workflow's completion."
+            echo "Maven not installed on runner. Cannot build JAR locally." >&2
+            exit 1
+          fi
+
+          if compgen -G "target/*.jar" > /dev/null; then
+            echo "Built JAR:"; ls -la target/*.jar
+          else
+            echo "Failed to produce JAR after local build." >&2
             exit 1
           fi
 
