@@ -46,4 +46,4 @@ jobs:
           docker build --no-cache -t us-docker.pkg.dev/practice-422202/machala/login:v1.0 .
 
       - name: Push image to Artifact Registry
-        run: us-docker.pkg.dev/practice-422202/machala/login:v1.0
+        run: docker push us-docker.pkg.dev/practice-422202/machala/login:v1.0
