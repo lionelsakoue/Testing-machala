@@ -2,13 +2,6 @@ name: Build and Push Image to GAR
 
 on:
   workflow_dispatch:
-  workflow_run:
-    workflows:
-      - Build Java artifact
-    types:
-      - completed
-    branches:
-      - main
 
 jobs:
   build:
