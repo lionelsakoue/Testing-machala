@@ -2,6 +2,11 @@ name: Build and Push Image to GAR
 
 on:
   workflow_dispatch:
+  workflow_run:
+    workflows:
+      - Build Java artifact
+    types:
+      - completed
 
 jobs:
   build:
@@ -13,22 +18,27 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Download built JAR artifact
+      - name: Download built JAR artifact (when triggered by jar workflow)
         if: ${{ github.event_name == 'workflow_run' }}
         uses: actions/download-artifact@v4
         with:
           name: auth-demo-jar
           path: target
-          github-token: ${{ secrets.GITHUB_TOKEN }}
           run-id: ${{ github.event.workflow_run.id }}
+
+      - name: Build JAR locally (fallback for manual dispatch)
+        if: ${{ github.event_name != 'workflow_run' }}
+        run: mvn -B -DskipTests package
 
       - name: Verify JAR exists
         run: |
-          if [ ! -f target/*.jar ]; then
-            echo "No built JAR was found in target/. Run the 'Build Java artifact' workflow first."
+          set -e
+          if compgen -G "target/*.jar" > /dev/null; then
+            echo "Found JAR:"; ls -la target/*.jar
+          else
+            echo "No built JAR was found in target/. If this run was started manually, the workflow tried to build the JAR locally; otherwise re-run the 'Build Java artifact' workflow and trigger this workflow via that workflow's completion."
             exit 1
           fi
-          ls -la target
 
       - name: Set up Google Cloud authentication
         uses: google-github-actions/auth@v2
