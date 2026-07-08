@@ -43,7 +43,7 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build --no-cache -t us-docker.pkg.dev/practice-422202/static/login:v1.0 .
+          docker build --no-cache -t us-docker.pkg.dev/practice-422202/machala/login:v1.0 .
 
       - name: Push image to Artifact Registry
-        run: docker push us-docker.pkg.dev/practice-422202/static/login:v1.0
+        run: us-docker.pkg.dev/practice-422202/machala/login:v1.0
