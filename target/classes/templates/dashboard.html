@@ -1,8 +1,14 @@
-<!DOCTYPE html>
-<html>
-<head><meta charset="UTF-8"><title>Dashboard</title></head>
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8"/>
+  <title>Dashboard</title>
+</head>
 <body>
-  <h2>Welcome, <span th:text="${username}">user</span></h2>
-  <p><a href="/logout">Logout</a></p>
+  <!-- include header fragment; controller adds "username" attribute -->
+  <div th:replace="~{fragments/header :: header}"></div>
+
+  <h1>Dashboard</h1>
+  <p>Welcome, <span th:text="${username != null ? username : #httpServletRequest.remoteUser}">user</span>!</p>
 </body>
 </html>

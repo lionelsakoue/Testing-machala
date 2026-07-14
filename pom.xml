@@ -49,6 +49,15 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- H2: local development only. Activated by the "local" Spring profile
+             (see application-local.properties) so the app can be run and tested
+             without Oracle. Not used by the default profile. -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>

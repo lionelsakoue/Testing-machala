@@ -2,15 +2,20 @@ name: Build and Push Image to GAR
 
 on:
   workflow_dispatch:
-  workflow_run:
-    workflows:
-      - Build Java artifact
-    types:
-      - completed
+    inputs:
+      image_tag:
+        description: 'Image tag to build and push'
+        required: true
+        default: 'v1.0'
+  push:
+    branches:
+      - main
+
+env:
+  IMAGE: us-docker.pkg.dev/practice-422202/machala/login
 
 jobs:
   build:
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     name: Build and Push Image
     runs-on: ubuntu-latest
 
@@ -18,38 +23,19 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Set up JDK 17 (for local Maven builds)
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-          cache: maven
+      # No Maven setup and no JAR download here on purpose.
+      # The Dockerfile is multi-stage: it compiles the application from source
+      # inside the build stage. Passing a pre-built JAR into the image is what
+      # previously allowed a stale target/ to be shipped, so the image no longer
+      # matches the repository.
 
-      - name: Download built JAR artifact (when triggered by jar workflow)
-        if: ${{ github.event_name == 'workflow_run' }}
-        uses: actions/download-artifact@v4
-        continue-on-error: true
-        with:
-          name: auth-demo-jar
-          path: target
-          run-id: ${{ github.event.workflow_run.id }}
-
-      - name: Ensure JAR exists (build locally if needed)
+      - name: Resolve image tag
+        id: tag
         run: |
-          set -e
-          if compgen -G "target/*.jar" > /dev/null; then
-            echo "JAR found in target/:"
-            ls -la target/*.jar
+          if [ -n "${{ github.event.inputs.image_tag }}" ]; then
+            echo "tag=${{ github.event.inputs.image_tag }}" >> "$GITHUB_OUTPUT"
           else
-            echo "JAR not found in target/. Building locally with Maven..."
-            mvn -B -DskipTests package
-            if compgen -G "target/*.jar" > /dev/null; then
-              echo "JAR built successfully:"
-              ls -la target/*.jar
-            else
-              echo "ERROR: Failed to build JAR with Maven"
-              exit 1
-            fi
+            echo "tag=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Set up Google Cloud authentication
@@ -63,9 +49,18 @@ jobs:
       - name: Configure Docker for GAR
         run: gcloud auth configure-docker us-docker.pkg.dev --quiet
 
-      - name: Build Docker image
+      - name: Build Docker image (compiles from source)
         run: |
-          docker build --no-cache -t us-docker.pkg.dev/practice-422202/machala/login:v1.0 .
+          docker build \
+            -t "${IMAGE}:${{ steps.tag.outputs.tag }}" \
+            -t "${IMAGE}:latest" \
+            .
 
       - name: Push image to Artifact Registry
-        run: docker push us-docker.pkg.dev/practice-422202/machala/login:v1.0
+        run: |
+          docker push "${IMAGE}:${{ steps.tag.outputs.tag }}"
+          docker push "${IMAGE}:latest"
+
+      - name: Summary
+        run: |
+          echo "Pushed ${IMAGE}:${{ steps.tag.outputs.tag }}" >> "$GITHUB_STEP_SUMMARY"

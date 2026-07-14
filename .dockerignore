@@ -1,7 +1,23 @@
-*.log
-*.tmp
+# CRITICAL: never ship a locally-built jar. The Dockerfile builds from source.
+target/
+
+# IDE / editor
 .idea
 .vscode
 *.iml
-.mvn
 .settings
+
+# Build / misc
+.mvn
+*.log
+*.tmp
+
+# Git
+.git
+.github
+
+# Local-only files
+cookies.txt
+Untitled-1.txt
+docker-compose.yml
+oracle-db/

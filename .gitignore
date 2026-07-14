@@ -1,0 +1,23 @@
+# Build output. This directory must never be committed: a stale target/ is what
+# caused the deployed image to contain templates that did not match the source.
+target/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+.settings/
+.classpath
+.project
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs / temp
+*.log
+*.tmp
+
+# Local scratch files
+cookies.txt
+Untitled-1.txt

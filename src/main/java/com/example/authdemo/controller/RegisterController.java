@@ -1,77 +1,52 @@
 package com.example.authdemo.controller;
 
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.provisioning.InMemoryUserDetailsManager;
-import org.springframework.security.crypto.password.PasswordEncoder;
-
+import com.example.authdemo.service.UserService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 @Controller
 public class RegisterController {
 
+    /**
+     * Registration persists to the database through UserService, which saves via
+     * UserRepository. The previous implementation wrote to an
+     * InMemoryUserDetailsManager, so accounts lived only in the JVM heap, were
+     * lost on restart, and never reached the USERS table.
+     */
+    private final UserService userService;
 
-    private final InMemoryUserDetailsManager userDetailsService;
-    private final PasswordEncoder passwordEncoder;
-
-
-    public RegisterController(
-            InMemoryUserDetailsManager userDetailsService,
-            PasswordEncoder passwordEncoder) {
-
-        this.userDetailsService = userDetailsService;
-        this.passwordEncoder = passwordEncoder;
-
+    public RegisterController(UserService userService) {
+        this.userService = userService;
     }
-
-
 
     @GetMapping("/register")
     public String registerPage() {
-
         return "register";
-
     }
 
-
-
     @PostMapping("/register")
-    public String register(
-            @RequestParam String username,
-            @RequestParam String password,
-            Model model) {
+    public String register(@RequestParam String username,
+                           @RequestParam String password,
+                           Model model) {
 
+        if (username == null || username.isBlank()
+                || password == null || password.isBlank()) {
 
-        if (userDetailsService.userExists(username)) {
-
-            model.addAttribute(
-                    "error",
-                    "Username already exists"
-            );
-
+            model.addAttribute("error", "Username and password are required.");
             return "register";
         }
 
+        try {
+            userService.registerNewUser(username, password);
+        } catch (IllegalArgumentException e) {
+            model.addAttribute("error", "Username already exists.");
+            return "register";
+        }
 
-
-        userDetailsService.createUser(
-                User.withUsername(username)
-                        .password(passwordEncoder.encode(password))
-                        .roles("USER")
-                        .build()
-        );
-
-
-
-        model.addAttribute(
-                "success",
-                "Account created successfully. Please login."
-        );
-
-
-        return "register";
-
+        // login.html renders a success banner when ?registered is present.
+        return "redirect:/login?registered";
     }
-
 }
